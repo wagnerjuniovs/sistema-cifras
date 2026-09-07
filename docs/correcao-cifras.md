@@ -37,3 +37,15 @@ A apresentação calculava larguras com uma estimativa de caracteres, permitia c
 Firebase, autenticação, regras, serviços e estrutura dos documentos não foram modificados. Os testes usam músicas sintéticas; não dependem de letras de terceiros nem da disponibilidade do Cifra Club.
 
 O script node scripts/browser-save-smoke.mjs valida persistência com conta temporária. SMOKE_URL permite repetir o mesmo fluxo na URL publicada. A suíte comum de navegador usa os componentes reais num harness servido apenas pelo Vite de desenvolvimento, não incluído na build publicada.
+
+## Validação adicional: iPhone 11 emulado com WebKit
+
+Foram adicionados dois projetos Playwright com toque habilitado, escala 2 e viewport/screen de 414×896 e 896×414. O WebKit utilizado localmente é a versão 26.5 distribuída pelo Playwright; isso não equivale ao Safari de um iPhone físico.
+
+Os 14 testes passaram nas duas orientações: login local e publicado, evento de colagem HTML/fragmento/texto, correção antiga com revisão e desfazer por toque, geometria de colunas e blocos, fonte, velocidade, rolagem, rotação, saída e apresentação sem requestFullscreen. Capturas de login, revisão e apresentação foram geradas; as apresentações foram inspecionadas visualmente.
+
+O fluxo de salvar, recarregar, editar, verificar estilos de impressão e entrar/sair da apresentação também foi executado no site público com WebKit emulado nas duas orientações. As contas temporárias e seus documentos foram removidos. O script aceita SMOKE_BROWSER=webkit e SMOKE_ORIENTATION=landscape. A geração de PDF continua restrita ao Chromium; no WebKit são verificados o botão e os estilos de impressão.
+
+Limites: a emulação não valida o menu nativo de colagem do iOS, teclado virtual, zoom automático ao focar campos, barras dinâmicas do Safari, recorte físico da tela ou gestos do sistema. A colagem WebKit é testada pelo evento com clipboardData, não pelo clipboard nativo do iOS. Não foi necessário alterar o código da aplicação nesta validação.
+
+Na primeira tentativa de persistência em paisagem houve um timeout aguardando a visualização após Salvar. Duas repetições completas consecutivas passaram, com limpeza das contas em todas as tentativas. A causa do timeout isolado não foi determinada; ele não é tratado como prova de compatibilidade perfeita.

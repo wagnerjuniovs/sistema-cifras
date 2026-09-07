@@ -34,8 +34,8 @@ jobs:
       - name: Executar testes
         run: npm run test
 
-      - name: Instalar Chromium
-        run: npx playwright install --with-deps chromium
+      - name: Instalar Chromium e WebKit
+        run: npx playwright install --with-deps chromium webkit
 
       - name: Verificar interface no navegador
         run: npm run e2e

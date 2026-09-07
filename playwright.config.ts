@@ -1,4 +1,4 @@
-import { defineConfig } from "@playwright/test";
+import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./tests",
@@ -16,7 +16,18 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
+      testIgnore: /iphone\.spec\.ts/,
       use: { browserName: "chromium" },
     },
+    ...(["portrait", "landscape"] as const).map((orientation) => ({
+      name: `iphone11-${orientation}`,
+      testMatch: /iphone\.spec\.ts/,
+      use: {
+        ...devices["iPhone 11"],
+        browserName: "webkit" as const,
+        viewport: orientation === "portrait" ? { width: 414, height: 896 } : { width: 896, height: 414 },
+        screen: orientation === "portrait" ? { width: 414, height: 896 } : { width: 896, height: 414 },
+      },
+    })),
   ],
 });
