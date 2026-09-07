@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+﻿import { expect, test } from "@playwright/test";
 
 test("abre a tela de login e alterna os modos de autenticação", async ({ page }) => {
   await page.goto("/");
@@ -33,4 +33,16 @@ test("renderiza a autenticação em largura de celular", async ({ page }) => {
   const panel = page.locator(".auth-panel");
   await expect(panel).toBeVisible();
   await expect(page.getByRole("button", { name: "Entrar" })).toBeVisible();
+});
+
+test("limpa conteúdo antigo pelo botão e permite desfazer", async ({ page }) => {
+  await page.goto("/tests/harness.html");
+  const editor=page.locator(".cm-content");
+  await editor.click();
+  await page.keyboard.insertText('  ">A ">Bm ">E/G#');
+  await page.getByRole("button",{name:"Corrigir colagem"}).click();
+  await expect(editor).toContainText("A Bm E/G#");
+  await expect(editor).not.toContainText('">');
+  await page.getByRole("button",{name:"Desfazer",exact:true}).click();
+  await expect(editor).toContainText('">');
 });

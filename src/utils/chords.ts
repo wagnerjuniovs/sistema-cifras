@@ -4,7 +4,7 @@ export interface TextRange {
 }
 
 const ROOT = String.raw`[A-G](?:#|b)?`;
-const SUFFIX = String.raw`(?:(?:maj|min|dim|aug|sus|add|alt|m|M|º|°|ø|\+|-|\d+|[#b]\d+|\([^\s\]]+\))*)`;
+const SUFFIX = String.raw`(?:(?:maj|min|dim|aug|sus|add|alt|m|M|º|°|ø|\+|-|\d+|[#b]\d+|\((?:[#b]?\d+|maj|min|dim|aug|sus|add|m|M|\+|-|/|,)+\))*)`;
 const CHORD_CORE = String.raw`${ROOT}${SUFFIX}(?:/${ROOT})?`;
 const BRACKET_CHORD = new RegExp(String.raw`\[${CHORD_CORE}\]`, "g");
 const CHORD_TOKEN = new RegExp(String.raw`^${CHORD_CORE}$`);
@@ -37,7 +37,13 @@ interface TokenInfo {
 }
 
 export function isChordToken(value: string): boolean {
-  return CHORD_TOKEN.test(value);
+  return CHORD_TOKEN.test(value) || (value.startsWith("(") && value.endsWith(")") && CHORD_TOKEN.test(value.slice(1, -1)));
+}
+
+export function isChordLine(line: string): boolean {
+  const tokens = line.replace(/^\s*\[[^\]]+\]\s*/, "").trim().split(/\s+/);
+  const chord = (token: string) => isChordToken(token) || isChordToken(token.replace(/^\(+|\)+$/g, ""));
+  return tokens.some(chord) && tokens.every((token) => chord(token) || /^[|:;/()-]+$/.test(token));
 }
 
 function normalizeToken(value: string): string {
@@ -48,8 +54,8 @@ function normalizeToken(value: string): string {
 }
 
 function cleanToken(raw: string, start: number): Omit<TokenInfo, "raw" | "chord" | "section" | "separator"> {
-  const leading = raw.match(/^[|([{:]+/)?.[0].length ?? 0;
-  const trailing = raw.match(/[|)\]},;:.]+$/)?.[0].length ?? 0;
+  const leading = raw.match(/^[|[{:]+/)?.[0].length ?? 0;
+  const trailing = raw.match(/[|\]},;:.]+$/)?.[0].length ?? 0;
   const clean = raw.slice(leading, raw.length - trailing);
 
   return {

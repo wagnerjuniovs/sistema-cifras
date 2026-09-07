@@ -16,14 +16,18 @@ export function useAutoScroll(
 
     let frame = 0;
     let lastTime = performance.now();
+    let remainder = 0;
 
     const tick = (time: number) => {
       const element = getScrollElement(target);
 
       if (element) {
-        const delta = time - lastTime;
+        const delta = Math.min(100, time - lastTime);
         const maxScroll = element.scrollHeight - element.clientHeight;
-        element.scrollTop = Math.min(maxScroll, element.scrollTop + (speed * delta) / 1000);
+        remainder += (speed * delta) / 1000;
+        const step = Math.floor(remainder);
+        remainder -= step;
+        element.scrollTop = Math.min(Math.max(0, maxScroll), element.scrollTop + step);
       }
 
       lastTime = time;

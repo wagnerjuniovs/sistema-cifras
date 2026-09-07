@@ -72,11 +72,18 @@ export function SongView({
   }, [song.id, speed]);
 
   useEffect(() => {
+    let f11RequestedUntil = 0;
+    const handleFullscreenKey = (event: KeyboardEvent) => {
+      if (event.key === "F11") f11RequestedUntil = Date.now() + 2000;
+    };
     const detectBrowserFullscreen = () => {
       const looksFullscreen =
-        window.innerWidth >= 900 && Math.abs(window.innerHeight - window.screen.height) <= 8;
+        window.innerWidth >= 900 &&
+        Math.abs(window.innerHeight - window.screen.height) <= 8 &&
+        Math.abs(window.outerHeight - window.innerHeight) <= 8;
 
-      if (looksFullscreen) {
+      if (looksFullscreen && Date.now() <= f11RequestedUntil) {
+        f11RequestedUntil = 0;
         setPresentationOpen(true);
       }
     };
@@ -88,9 +95,11 @@ export function SongView({
     };
 
     window.addEventListener("resize", detectBrowserFullscreen);
+    window.addEventListener("keydown", handleFullscreenKey);
     document.addEventListener("fullscreenchange", handleFullscreenChange);
     return () => {
       window.removeEventListener("resize", detectBrowserFullscreen);
+      window.removeEventListener("keydown", handleFullscreenKey);
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
     };
   }, []);

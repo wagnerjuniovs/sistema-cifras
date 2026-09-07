@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Minimize2, Minus, Plus } from "lucide-react";
 import { AutoScrollControls } from "./AutoScrollControls";
 import { ChordText } from "./ChordText";
 import { useAutoScroll } from "../hooks/useAutoScroll";
-import { useWindowSize } from "../hooks/useWindowSize";
+
 import type { SongDoc } from "../types";
 import { calculatePresentationLayout } from "../utils/layout";
 
@@ -27,19 +27,62 @@ export function PresentationMode({
   const shellRef = useRef<HTMLDivElement | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const requestedFullscreenRef = useRef(false);
+  const onExitRef = useRef(onExit);
+  onExitRef.current = onExit;
   const [controlsVisible, setControlsVisible] = useState(true);
   const [fontOffset, setFontOffset] = useState(0);
-  const size = useWindowSize();
-  const desktopLayout = size.width >= 820 && size.height >= 520;
-  const layout = useMemo(
-    () => calculatePresentationLayout(song.content, size.width, size.height, fontOffset),
-    [fontOffset, size.height, size.width, song.content],
-  );
+  const [allowColumns, setAllowColumns] = useState(true);
+  const [layout, setLayout] = useState(() => calculatePresentationLayout(song.content, 800, 600));
+  useEffect(() => {
+    const stage = scrollRef.current;
+    if (!stage) return;
+    let frame = 0;
+    let disposed = false;
+    const probe = document.createElement("pre");
+    probe.className = "presentation-block presentation-measure";
+    shellRef.current?.append(probe);
+    const measure = () => {
+      if (disposed) return;
+      const style = getComputedStyle(stage);
+      const width = stage.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+      const height = stage.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom);
+      const next = calculatePresentationLayout(song.content, Math.max(1, width), Math.max(1, height), fontOffset,
+        (lines, font, blockWidth) => {
+          probe.style.fontSize = font + "px";
+          probe.style.lineHeight = font * 1.35 + "px";
+          probe.style.width = blockWidth === undefined ? "max-content" : blockWidth + "px";
+          probe.textContent = lines.join("\n") + "\n";
+          const rect = probe.getBoundingClientRect();
+          return { width: rect.width, height: rect.height };
+        }, allowColumns);
+      setLayout((current) => JSON.stringify(current) === JSON.stringify(next) ? current : next);
+    };
+    const schedule = () => { if (disposed) return; cancelAnimationFrame(frame); frame = requestAnimationFrame(measure); };
+    const observer = new ResizeObserver(schedule);
+    observer.observe(stage);
+    if (shellRef.current) observer.observe(shellRef.current);
+    document.addEventListener("fullscreenchange", schedule);
+    window.addEventListener("orientationchange", schedule);
+    document.fonts.addEventListener("loadingdone", schedule);
+    void document.fonts.ready.then(schedule);
+    schedule();
+    return () => {
+      disposed = true;
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+      document.removeEventListener("fullscreenchange", schedule);
+      window.removeEventListener("orientationchange", schedule);
+      document.fonts.removeEventListener("loadingdone", schedule);
+      probe.remove();
+    };
+  }, [song.content, fontOffset, allowColumns]);
 
   useAutoScroll(scrollRef, activeScroll, speed);
 
   useEffect(() => {
     const node = shellRef.current;
+    const previousFocus = document.activeElement as HTMLElement | null;
+    scrollRef.current?.focus();
 
     if (node?.requestFullscreen) {
       node
@@ -54,26 +97,29 @@ export function PresentationMode({
 
     const handleFullscreenChange = () => {
       if (requestedFullscreenRef.current && !document.fullscreenElement) {
-        onExit();
+        onExitRef.current();
       }
     };
 
     document.addEventListener("fullscreenchange", handleFullscreenChange);
-    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
-  }, [onExit]);
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+      previousFocus?.focus();
+    };
+  }, []);
 
   useEffect(() => {
     let timer = 0;
 
     const reveal = (event?: Event) => {
       if (event instanceof KeyboardEvent && event.key === "Escape") {
-        onExit();
+        onExitRef.current();
         return;
       }
 
       setControlsVisible(true);
       window.clearTimeout(timer);
-      timer = window.setTimeout(() => setControlsVisible(false), 3200);
+      timer = window.setTimeout(() => { if (!shellRef.current?.contains(document.activeElement)) setControlsVisible(false); }, 3200);
     };
 
     reveal();
@@ -89,41 +135,21 @@ export function PresentationMode({
       window.removeEventListener("touchstart", reveal);
       window.removeEventListener("keydown", reveal);
     };
-  }, [onExit]);
+  }, []);
 
   return (
     <div className="presentation-shell" ref={shellRef}>
-      <div
-        className={
-          desktopLayout
-            ? layout.needsScroll
-              ? "presentation-stage needs-scroll"
-              : "presentation-stage"
-            : "presentation-stage mobile-presentation"
-        }
-        ref={scrollRef}
-      >
-        {desktopLayout ? (
-          <div
-            className="presentation-columns"
-            style={{
-              gap: `${layout.gap}px`,
-              gridTemplateColumns: `repeat(${layout.columnCount}, minmax(0, 1fr))`,
-              fontSize: `${layout.fontSize}px`,
-              lineHeight: `${layout.lineHeight}px`,
-            }}
-          >
-            {layout.columns.map((column, index) => (
-              <pre className="presentation-column" key={`${song.id}-${index}`}>
-                <ChordText content={column.join("\n")} />
-              </pre>
-            ))}
-          </div>
-        ) : (
-          <pre className="presentation-mobile-text">
-            <ChordText content={song.content} />
-          </pre>
-        )}
+      <div className="presentation-stage" ref={scrollRef} tabIndex={0} aria-label="Cifra em tela cheia">
+        <div className="presentation-columns" style={{
+          gap: layout.gap + "px", gridTemplateColumns: `repeat(${layout.columnCount}, minmax(0, 1fr))`,
+          fontSize: layout.fontSize + "px", lineHeight: layout.lineHeight + "px",
+        }}>
+          {layout.blocks.map((column, index) => <div className="presentation-column" key={index}>
+            {column.map((block) => <pre className="presentation-block" data-block-id={block.id} key={block.id}>
+              <ChordText content={block.lines.join("\n")} />{"\n"}
+            </pre>)}
+          </div>)}
+        </div>
       </div>
 
       <div
@@ -134,7 +160,7 @@ export function PresentationMode({
           <span>{song.artist || "Sem cantor"}</span>
         </div>
         <div className="presentation-actions">
-          {desktopLayout ? (
+          {(
             <div className="font-controls" aria-label="Tamanho da fonte">
               <button
                 aria-label="Diminuir fonte"
@@ -154,7 +180,8 @@ export function PresentationMode({
                 <Plus aria-hidden="true" size={18} />
               </button>
             </div>
-          ) : null}
+          )}
+          <button type="button" className="secondary-button" aria-pressed={allowColumns} onClick={() => setAllowColumns((value) => !value)}>Colunas</button>
           <AutoScrollControls
             active={activeScroll}
             compact

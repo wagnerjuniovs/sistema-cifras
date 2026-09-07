@@ -1,152 +1,118 @@
+import { isChordLine, findChordRanges } from "./chords";
+
+export interface MusicalBlock { id: number; lines: string[] }
 export interface PresentationLayout {
   columns: string[][];
+  blocks: MusicalBlock[][];
   columnCount: number;
   fontSize: number;
   lineHeight: number;
   gap: number;
   needsScroll: boolean;
 }
+const section = (line: string) => /^\s*\[[^\]]+\]/.test(line);
+const tab = (line: string) => /^\s*[eBGDAEbgdae]?\|[-\d|hpsbr~x/\\(). ]+/.test(line);
 
-const SECTION_START = /^\s*(?:\[)?\s*(intro|introducao|introdução|verso|estrofe|refrão|refrao|pré-refrão|pre-refrão|ponte|coro|solo|final|interlúdio|interludio|parte|tom)\b/i;
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
+export function musicalBlocks(content: string): MusicalBlock[] {
+  const lines = content.replace(/\r\n?/g, "\n").split("\n").map((line) => {
+    let expanded = "";
+    for (const char of line) expanded += char === "\t" ? " ".repeat(4 - expanded.length % 4) : char;
+    return expanded;
+  });
+  const blocks: MusicalBlock[] = [];
+  for (let i = 0; i < lines.length;) {
+    const start = i;
+    if (section(lines[i])) {
+      i++;
+      while (i < lines.length && !lines[i].trim()) i++;
+    }
+    if (i < lines.length && tab(lines[i])) {
+      while (i < lines.length && tab(lines[i])) i++;
+    } else {
+      while (i < lines.length && isChordLine(lines[i]) && !section(lines[i])) i++;
+      if (i < lines.length && !section(lines[i])) i++;
+    }
+    if (i === start) i++;
+    blocks.push({ id: start, lines: lines.slice(start, i) });
+  }
+  return blocks;
 }
 
-function splitLinesIntoColumns(lines: string[], columnCount: number): string[][] {
-  if (columnCount <= 1) {
-    return [lines];
+/** Slice chord/lyric groups at shared columns, preferring word boundaries. */
+export function wrapMusicalBlock(block: MusicalBlock, capacity: number): MusicalBlock {
+  const lines: string[] = [];
+  // Section labels are independent of the chord/lyric coordinates.
+  let source = block.lines;
+  if (source.length > 1 && section(source[0]) && !isChordLine(source[0])) {
+    lines.push(...wrapMusicalBlock({ id: block.id, lines: [source[0]] }, capacity).lines);
+    source = source.slice(1);
   }
-
-  const columns: string[][] = [];
   let start = 0;
-
-  for (let index = 0; index < columnCount - 1; index += 1) {
-    const remainingColumns = columnCount - index;
-    const remainingLines = lines.length - start;
-    const target = start + Math.ceil(remainingLines / remainingColumns);
-    const min = Math.max(start + 1, target - 8);
-    const max = Math.min(lines.length - (remainingColumns - 1), target + 8);
-    let selected = clamp(target, min, max);
-
-    for (let position = target; position <= max; position += 1) {
-      if (lines[position]?.trim() === "") {
-        selected = position + 1;
-        break;
-      }
-    }
-
-    if (selected === target) {
-      for (let position = target; position >= min; position -= 1) {
-        if (lines[position]?.trim() === "") {
-          selected = position + 1;
+  const length = Math.max(...source.map((line) => line.length), 0);
+  while (start < length) {
+    let end = Math.min(length, start + Math.max(1, capacity));
+    if (end < length) {
+      // A shared whitespace boundary does not bisect an accord or a word in either line.
+      for (let candidate = end; candidate > start + capacity / 2; candidate--) {
+        if (source.every((line) => candidate >= line.length || /\s/.test(line[candidate - 1]) || /\s/.test(line[candidate]))) {
+          end = candidate;
           break;
         }
       }
     }
-
-    if (selected === target) {
-      for (let position = target; position <= max; position += 1) {
-        if (SECTION_START.test(lines[position] ?? "")) {
-          selected = position;
-          break;
-        }
+    for (const line of source) {
+      for (const range of findChordRanges(line)) {
+        if (range.start < end && range.end > end && range.start > start) end = range.start;
       }
     }
-
-    columns.push(lines.slice(start, selected));
-    start = selected;
+    lines.push(...source.map((line) => line.slice(start, end)));
+    start = end;
   }
-
-  columns.push(lines.slice(start));
-  return columns;
+  return { ...block, lines: lines.length ? lines : source };
 }
 
-function longestLine(columns: string[][]): number {
-  return columns.reduce(
-    (longest, column) => Math.max(longest, ...column.map((line) => line.length)),
-    0,
-  );
-}
+type Measure = (lines: string[], font: number, width?: number) => { width: number; height: number };
 
-function tallestColumn(columns: string[][]): number {
-  return columns.reduce((tallest, column) => Math.max(tallest, column.length), 0);
-}
-
-export function calculatePresentationLayout(
-  content: string,
-  viewportWidth: number,
-  viewportHeight: number,
-  fontOffset = 0,
-): PresentationLayout {
-  const lines = content.replace(/\r\n/g, "\n").split("\n");
-  const padding = viewportWidth < 760 ? 24 : 56;
-  const usableWidth = Math.max(260, viewportWidth - padding * 2);
-  const usableHeight = Math.max(260, viewportHeight - padding * 2);
-  const maxColumns = clamp(Math.floor(usableWidth / 230), 1, 6);
-  const gap = viewportWidth < 900 ? 20 : 30;
-  let best: PresentationLayout | null = null;
-  let bestScore = Number.NEGATIVE_INFINITY;
-
-  for (let columnCount = 1; columnCount <= maxColumns; columnCount += 1) {
-    const columns = splitLinesIntoColumns(lines, columnCount);
-    const columnWidth = (usableWidth - gap * (columnCount - 1)) / columnCount;
-
-    for (let fontSize = 26; fontSize >= 11; fontSize -= 1) {
-      const lineHeight = Math.round(fontSize * 1.22);
-      const charWidth = fontSize * 0.58;
-      const widthOk = longestLine(columns) * charWidth <= columnWidth;
-      const heightOk = tallestColumn(columns) * lineHeight <= usableHeight;
-      const score =
-        fontSize * 100 +
-        (heightOk ? 300 : 0) +
-        (widthOk ? 300 : 0) -
-        columnCount * 18 -
-        Math.max(0, longestLine(columns) * charWidth - columnWidth) * 0.4 -
-        Math.max(0, tallestColumn(columns) * lineHeight - usableHeight) * 0.8;
-
-      if (heightOk && widthOk) {
-        const adjustedFont = clamp(fontSize + fontOffset, 9, 34);
-        const adjustedLineHeight = Math.round(adjustedFont * 1.22);
-
-        return {
-          columns,
-          columnCount,
-          fontSize: adjustedFont,
-          lineHeight: adjustedLineHeight,
-          gap,
-          needsScroll:
-            longestLine(columns) * adjustedFont * 0.58 > columnWidth ||
-            tallestColumn(columns) * adjustedLineHeight > usableHeight,
-        };
-      }
-
-      if (score > bestScore) {
-        const adjustedFont = clamp(fontSize + fontOffset, 9, 34);
-        const adjustedLineHeight = Math.round(adjustedFont * 1.22);
-        bestScore = score;
-        best = {
-          columns,
-          columnCount,
-          fontSize: adjustedFont,
-          lineHeight: adjustedLineHeight,
-          gap,
-          needsScroll:
-            longestLine(columns) * adjustedFont * 0.58 > columnWidth ||
-            tallestColumn(columns) * adjustedLineHeight > usableHeight,
-        };
-      }
+function distribute(blocks: MusicalBlock[], heights: number[], count: number): { blocks: MusicalBlock[][]; height: number } {
+  let low = Math.max(...heights, 0);
+  let high = heights.reduce((a, b) => a + b, 0);
+  const partition = (limit: number) => {
+    const columns: MusicalBlock[][] = [[]];
+    let height = 0;
+    for (let i = 0; i < blocks.length; i++) {
+      if (height && height + heights[i] > limit + 0.1) { columns.push([]); height = 0; }
+      columns[columns.length - 1].push(blocks[i]);
+      height += heights[i];
     }
+    return columns;
+  };
+  for (let i = 0; i < 24; i++) {
+    const mid = (low + high) / 2;
+    if (partition(mid).length <= count) high = mid; else low = mid;
   }
+  return { blocks: partition(high), height: high };
+}
 
-  return (
-    best ?? {
-      columns: [lines],
-      columnCount: 1,
-      fontSize: clamp(18 + fontOffset, 9, 34),
-      lineHeight: clamp(22 + fontOffset, 12, 42),
-      gap,
-      needsScroll: true,
-    }
-  );
+export function calculatePresentationLayout(content: string, width: number, height: number, fontOffset = 0,
+  measure: Measure = (lines, font) => ({ width: Math.max(...lines.map((line) => line.length), 0) * font * 0.62, height: lines.length * font * 1.35 }),
+  allowColumns = true): PresentationLayout {
+  const original = musicalBlocks(content);
+  const gap = 28;
+  const preferred = Math.min(32, Math.max(14, 22 + fontOffset));
+  let fallback: PresentationLayout | undefined;
+  for (let font = preferred; font >= Math.max(14, 14 + fontOffset); font--) {
+    const character = measure(["M"], font).width;
+    const naturalWidth = measure(original.flatMap((block) => block.lines), font).width;
+    const maxColumns = allowColumns ? Math.max(1, Math.min(original.length, Math.floor((width + gap) / (Math.max(280, naturalWidth + 2) + gap)))) : 1;
+    const columnWidth = (width - gap * (maxColumns - 1)) / maxColumns;
+    const capacity = Math.max(1, Math.floor((columnWidth - 2) / character));
+    const wrapped = original.map((block) => wrapMusicalBlock(block, capacity));
+    const heights = wrapped.map((block) => measure(block.lines, font, columnWidth).height);
+    const partition = distribute(wrapped, heights, maxColumns);
+    const result = { blocks: partition.blocks, columns: partition.blocks.map((column) => column.flatMap((block) => block.lines)),
+      columnCount: partition.blocks.length, fontSize: font, lineHeight: font * 1.35, gap, needsScroll: partition.height > height + 1 };
+    if (!result.needsScroll) return result;
+    fallback = result;
+  }
+  return fallback!;
 }

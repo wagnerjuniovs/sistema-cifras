@@ -25,14 +25,27 @@ jobs:
       - name: Configurar Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
 
       - name: Instalar dependências
-        run: npm install
+        run: npm ci
 
       - name: Executar testes
         run: npm run test
+
+      - name: Instalar Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Verificar interface no navegador
+        run: npm run e2e
+
+      - name: Guardar capturas e rastros dos testes
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-tests
+          path: test-results/
 
       - name: Gerar build
         run: npm run build

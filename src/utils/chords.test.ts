@@ -29,3 +29,8 @@ describe("detecção de acordes", () => {
     expect(isChordToken("Amanhecer")).toBe(false);
   });
 });
+
+it("destaca extensões entre parênteses sem aceitar frases", () => {
+  expect(highlighted("C7(b5) (Am) E/G#")).toEqual(["C7(b5)", "(Am)", "E/G#"]);
+  expect(isChordToken("C(frase)")).toBe(false);
+});

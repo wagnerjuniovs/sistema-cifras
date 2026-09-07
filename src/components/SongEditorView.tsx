@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, LogOut, Music2, Save } from "lucide-react";
-import { ChordEditor } from "./ChordEditor";
+import { ArrowLeft, LogOut, Music2, Save, WandSparkles } from "lucide-react";
+import { ChordEditor, type ChordEditorHandle } from "./ChordEditor";
 import { FolderPicker } from "./FolderPicker";
 import { createFolder, createSong, updateSong } from "../services/firestore";
 import { firebaseErrorMessage } from "../lib/firebase";
@@ -69,6 +69,7 @@ export function SongEditorView({
           },
     [editorIdentity, props],
   );
+  const editorRef = useRef<ChordEditorHandle>(null);
   const initialRef = useRef(initialInput);
   const allowRouteLeaveRef = useRef(false);
   const [title, setTitle] = useState(initialInput.title);
@@ -157,6 +158,8 @@ export function SongEditorView({
       setSaving(false);
     }
   };
+
+  const handleCleanCifraClubPaste = () => editorRef.current?.repair();
 
   useEffect(() => {
     const handleKey = (event: KeyboardEvent) => {
@@ -278,11 +281,19 @@ export function SongEditorView({
 
         <section className="editor-surface" aria-label="Conteúdo da cifra">
           <div className="editor-status-row">
-            <h1>Conteúdo da cifra</h1>
-            {dirty ? <span className="status-pill warning">Alterações não salvas</span> : null}
-            {savedMessage ? <span className="status-pill success">{savedMessage}</span> : null}
+            <div>
+              <h1>Conteúdo da cifra</h1>
+              <div className="editor-status-pills">
+                {dirty ? <span className="status-pill warning">Alterações não salvas</span> : null}
+                {savedMessage ? <span className="status-pill success">{savedMessage}</span> : null}
+              </div>
+            </div>
+            <button className="secondary-button cleaner-button" onClick={handleCleanCifraClubPaste} type="button">
+              <WandSparkles aria-hidden="true" size={18} />
+              Corrigir colagem
+            </button>
           </div>
-          <ChordEditor ariaLabel="Editor de cifra musical" onChange={setContent} value={content} />
+          <ChordEditor ref={editorRef} ariaLabel="Editor de cifra musical" onChange={setContent} value={content} />
         </section>
       </section>
 
