@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from "react";
+import React, { useLayoutEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { SongEditorView } from "../src/components/SongEditorView";
 import { PresentationMode } from "../src/components/PresentationMode";
@@ -13,12 +13,12 @@ function Harness() {
   const [active,setActive] = useState(false);
   const [speed,setSpeed] = useState(24);
   const [notice,setNotice] = useState("");
-  useEffect(() => {
+  useLayoutEffect(() => {
     const update = (event: Event) => setContent((event as CustomEvent<string>).detail);
     window.addEventListener("test-song", update);
     return () => window.removeEventListener("test-song", update);
   },[]);
-  const song = { id: "fixture", title: "Música sintética", artist: "Teste", content, folderId: null, createdAt: null, updatedAt: null };
+  const song = { id: "fixture", title: new URLSearchParams(window.location.search).get("title") || "Música sintética", artist: "Teste", content, folderId: null, createdAt: null, updatedAt: null };
   if (new URLSearchParams(window.location.search).has("library")) {
     return <HomeView uid="test" email={null} folders={[]}
       songs={[song, { ...song, id: "ready", title: "Música revisada", status: "ready" }]}

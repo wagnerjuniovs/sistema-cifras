@@ -1,4 +1,4 @@
-import { Fragment } from "react";
+import { Fragment, memo } from "react";
 import { findChordRanges } from "../utils/chords";
 
 interface ChordTextProps {
@@ -35,7 +35,7 @@ function renderLine(line: string, lineIndex: number) {
   return parts;
 }
 
-export function ChordText({ content }: ChordTextProps) {
+export const ChordText = memo(function ChordText({ content }: ChordTextProps) {
   const lines = content.replace(/\r\n/g, "\n").split("\n");
 
   return (
@@ -48,4 +48,4 @@ export function ChordText({ content }: ChordTextProps) {
       ))}
     </>
   );
-}
+});

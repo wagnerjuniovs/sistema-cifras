@@ -61,7 +61,7 @@ export function SongView({
   const [presentationOpen, setPresentationOpen] = useState(false);
   const breadcrumbs = getFolderPath(song.folderId, folders);
 
-  useAutoScroll(null, autoScroll && !presentationOpen, speed);
+  useAutoScroll(null, autoScroll && !presentationOpen && !moveOpen && !deleteOpen, speed);
 
   useEffect(() => {
     setSpeed(readSavedSpeed(song.id));

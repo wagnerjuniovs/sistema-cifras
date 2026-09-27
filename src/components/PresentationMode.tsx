@@ -37,6 +37,7 @@ export function PresentationMode({
     const stage = scrollRef.current;
     if (!stage) return;
     let frame = 0;
+    let lastSize = "";
     let disposed = false;
     const probe = document.createElement("pre");
     probe.className = "presentation-block presentation-measure";
@@ -46,6 +47,9 @@ export function PresentationMode({
       const style = getComputedStyle(stage);
       const width = stage.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
       const height = stage.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom);
+      const size = `${width}:${height}`;
+      if (size === lastSize) return;
+      lastSize = size;
       const next = calculatePresentationLayout(song.content, Math.max(1, width), Math.max(1, height), fontOffset,
         (lines, font, blockWidth) => {
           probe.style.fontSize = font + "px";
@@ -58,13 +62,14 @@ export function PresentationMode({
       setLayout((current) => JSON.stringify(current) === JSON.stringify(next) ? current : next);
     };
     const schedule = () => { if (disposed) return; cancelAnimationFrame(frame); frame = requestAnimationFrame(measure); };
+    const fontsChanged = () => { lastSize = ""; schedule(); };
     const observer = new ResizeObserver(schedule);
     observer.observe(stage);
     if (shellRef.current) observer.observe(shellRef.current);
     document.addEventListener("fullscreenchange", schedule);
     window.addEventListener("orientationchange", schedule);
-    document.fonts.addEventListener("loadingdone", schedule);
-    void document.fonts.ready.then(schedule);
+    document.fonts.addEventListener("loadingdone", fontsChanged);
+    void document.fonts.ready.then(fontsChanged);
     schedule();
     return () => {
       disposed = true;
@@ -72,7 +77,7 @@ export function PresentationMode({
       observer.disconnect();
       document.removeEventListener("fullscreenchange", schedule);
       window.removeEventListener("orientationchange", schedule);
-      document.fonts.removeEventListener("loadingdone", schedule);
+      document.fonts.removeEventListener("loadingdone", fontsChanged);
       probe.remove();
     };
   }, [song.content, fontOffset, allowColumns]);
