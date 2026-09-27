@@ -13,6 +13,11 @@ function Harness() {
   const [active,setActive] = useState(false);
   const [speed,setSpeed] = useState(24);
   const [notice,setNotice] = useState("");
+  const readingLayout = new URLSearchParams(window.location.search).has("readingLayout");
+  const readingFolders = readingLayout ? [
+    { id: "genre", name: "Sertanejo", parentId: null, createdAt: null, updatedAt: null },
+    { id: "artist", name: "Dupla de teste", parentId: "genre", createdAt: null, updatedAt: null },
+  ] : [];
   useLayoutEffect(() => {
     const update = (event: Event) => setContent((event as CustomEvent<string>).detail);
     window.addEventListener("test-song", update);
@@ -29,7 +34,7 @@ function Harness() {
     <button onClick={() => setPresentation(true)}>Apresentar fixture</button>
     <button onClick={() => setView(true)}>Visualizar fixture</button>
     <span>{notice}</span>
-    {view ? <SongView song={song} uid="test" email={null} folders={[]} onGoFolder={() => {}} onEdit={() => setView(false)} onSignOut={() => {}} onToast={setNotice} /> :
+    {view ? <SongView song={readingLayout ? {...song, artist: "Dupla de teste", folderId: "artist"} : song} uid="test" email={readingLayout ? "musico@example.com" : null} folders={readingFolders} onGoFolder={() => {}} onEdit={() => setView(false)} onSignOut={() => {}} onToast={setNotice} /> :
     <SongEditorView key={content} mode="edit" song={song} uid="test" email={null} folders={[]} onCancel={() => {}} onSaved={() => {}} onSignOut={() => {}} onToast={setNotice} />}
     {presentation && <PresentationMode song={song} activeScroll={active} speed={speed} onActiveScrollChange={setActive} onSpeedChange={setSpeed} onExit={() => { setPresentation(false); if(document.fullscreenElement) void document.exitFullscreen(); }} />}
   </>;

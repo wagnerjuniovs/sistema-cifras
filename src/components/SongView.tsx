@@ -20,7 +20,7 @@ import { useAutoScroll } from "../hooks/useAutoScroll";
 import { createFolder, deleteSong, moveSong } from "../services/firestore";
 import type { FolderDoc, FolderId, SongDoc, ToastKind } from "../types";
 import { firebaseErrorMessage } from "../lib/firebase";
-import { formatDate, getFolderPath, getFolderPathLabel } from "../utils/text";
+import { getFolderPath } from "../utils/text";
 
 interface SongViewProps {
   uid: string;
@@ -184,10 +184,11 @@ export function SongView({
       <article className="song-document">
         <header className="song-header">
           <div>
-            <p className="eyebrow">{getFolderPathLabel(song.folderId, folders)}</p>
             <h1>{song.title}</h1>
-            <div className="no-print"><SongStatusBadge song={song} /></div>
-            <p className="song-artist">{song.artist || "Sem cantor informado"}</p>
+            <div className="song-heading-meta">
+              <div className="no-print"><SongStatusBadge song={song} /></div>
+              <p className="song-artist">{song.artist || "Sem cantor informado"}</p>
+            </div>
           </div>
           <div className="song-actions no-print">
             <SongStatusControl uid={uid} song={song} onToast={onToast} />
@@ -227,17 +228,6 @@ export function SongView({
             </div>
           </div>
         </header>
-
-        <dl className={`song-meta no-print${moreActionsOpen ? " expanded" : ""}`}>
-          <div>
-            <dt>Criada</dt>
-            <dd>{formatDate(song.createdAt)}</dd>
-          </div>
-          <div>
-            <dt>Alterada</dt>
-            <dd>{formatDate(song.updatedAt)}</dd>
-          </div>
-        </dl>
 
         <pre className="song-text">
           <ChordText content={song.content} />

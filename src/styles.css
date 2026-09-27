@@ -1285,3 +1285,33 @@ input::placeholder {
   .presentation-controls .autoscroll-controls .icon-button { width: 36px; }
   .presentation-controls .speed-slider input { min-height: 44px; }
 }
+
+/* Desktop reading: reserve the page for the score, not its controls. */
+@media screen and (min-width: 821px) {
+  .song-main { padding-top: 12px; }
+  .song-main .app-header { margin-bottom: 6px; gap: 12px; }
+  .song-main .app-header button { min-height: 32px; font-size: 13px; padding: 0 10px; }
+  .song-main .breadcrumbs { margin-bottom: 6px; gap: 2px; font-size: 12px; }
+  .song-main .breadcrumbs button { min-height: 24px; }
+  .song-main .song-document { padding: 16px 22px; }
+  .song-main .song-header { gap: 8px; padding-bottom: 8px; margin-bottom: 8px; }
+  .song-main .song-header h1 { font-size: 28px; line-height: 1.2; }
+  .song-heading-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 12px; margin-top: 6px; }
+  .song-heading-meta .song-artist { order: -1; margin: 0; font-size: 14px; font-weight: 500; }
+  .song-heading-meta .song-status { margin-top: 0; font-size: 11px; padding: 4px 8px; }
+  .song-main .song-actions, .song-main .song-secondary-actions { gap: 6px; }
+  .song-main .song-actions button { min-height: 34px; font-size: 12px; padding: 5px 10px; gap: 6px; }
+  .song-main .song-actions button > svg { width: 16px; height: 16px; }
+  .song-main .floating-scroll { margin-top: 14px; }
+  .floating-scroll .autoscroll-controls {
+    width: min(100%, 460px); padding: 6px; gap: 6px;
+    grid-template-columns: 84px 34px minmax(0, 1fr) 34px 28px;
+  }
+  .floating-scroll .autoscroll-controls button { min-height: 34px; height: 34px; font-size: 12px; padding: 0 8px; gap: 6px; }
+  .floating-scroll .autoscroll-controls .icon-button { width: 34px; padding: 0; }
+  .floating-scroll .autoscroll-controls button > svg { width: 16px; height: 16px; }
+  .floating-scroll .speed-slider { grid-template-columns: minmax(0, 1fr); gap: 0; min-width: 0; }
+  .floating-scroll .speed-slider span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .floating-scroll .speed-slider input { min-height: 34px; margin: 0; }
+  .floating-scroll .speed-readout { min-width: 0; font-size: 12px; font-variant-numeric: tabular-nums; }
+}
