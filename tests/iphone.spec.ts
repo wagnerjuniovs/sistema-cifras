@@ -114,3 +114,13 @@ test('apresentação funciona sem API de fullscreen e com linha longa',async({pa
   await page.getByRole('button',{name:'Sair da tela cheia'}).tap();
   await expect(page.locator('.presentation-shell')).toHaveCount(0);
 });
+
+test('status de cifras antigas e filtros por toque sem overflow', async ({page}, info) => {
+  await page.goto('/tests/harness.html?library');
+  await expect(page.getByText('Pendente de revisão', {exact:true})).toBeVisible();
+  await page.getByRole('button', {name:'Prontas (1)', exact:true}).tap();
+  await expect(page.getByText('Música revisada', {exact:true})).toBeVisible();
+  await expect(page.getByText('Música sintética', {exact:true})).toHaveCount(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1)).toBe(true);
+  await page.screenshot({path:info.outputPath('status.png'),fullPage:true});
+});

@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { SongEditorView } from "../src/components/SongEditorView";
 import { PresentationMode } from "../src/components/PresentationMode";
 import { SongView } from "../src/components/SongView";
+import { HomeView } from "../src/components/HomeView";
 import "../src/styles.css";
 
 function Harness() {
@@ -18,6 +19,12 @@ function Harness() {
     return () => window.removeEventListener("test-song", update);
   },[]);
   const song = { id: "fixture", title: "Música sintética", artist: "Teste", content, folderId: null, createdAt: null, updatedAt: null };
+  if (new URLSearchParams(window.location.search).has("library")) {
+    return <HomeView uid="test" email={null} folders={[]}
+      songs={[song, { ...song, id: "ready", title: "Música revisada", status: "ready" }]}
+      currentFolderId={null} onOpenFolder={() => {}} onOpenSong={() => {}}
+      onNewSong={() => {}} onEditSong={() => {}} onSignOut={() => {}} onToast={setNotice} />;
+  }
   return <>
     <button onClick={() => setPresentation(true)}>Apresentar fixture</button>
     <button onClick={() => setView(true)}>Visualizar fixture</button>

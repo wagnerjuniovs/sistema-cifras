@@ -11,6 +11,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { Modal } from "./Modal";
+import { SongStatusBadge, SongStatusControl } from "./SongStatusControl";
 import { FolderPicker } from "./FolderPicker";
 import type { FolderDoc, FolderId, SongDoc, ToastKind } from "../types";
 import {
@@ -63,6 +64,7 @@ export function HomeView({
   onToast,
 }: HomeViewProps) {
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [newFolderOpen, setNewFolderOpen] = useState(false);
   const [folderName, setFolderName] = useState("");
   const [folderToRename, setFolderToRename] = useState<FolderDoc | null>(null);
@@ -86,12 +88,13 @@ export function HomeView({
   const normalizedSearch = normalizeForSearch(search);
 
   const searchResults = useMemo(() => {
-    if (!normalizedSearch) {
+    if (!normalizedSearch && statusFilter === "all") {
       return { folders: [], songs: [] };
     }
 
     const folderMatches = sortFolders(
       folders.filter((folder) => {
+        if (statusFilter !== "all") return false;
         const haystack = normalizeForSearch(`${folder.name} ${getFolderPathLabel(folder.id, folders)}`);
         return haystack.includes(normalizedSearch);
       }),
@@ -99,6 +102,7 @@ export function HomeView({
 
     const songMatches = sortSongs(
       songs.filter((song) => {
+        if (statusFilter !== "all" && (song.status ?? "pending") !== statusFilter) return false;
         const haystack = normalizeForSearch(
           `${song.title} ${song.artist} ${getFolderPathLabel(song.folderId, folders)} ${song.content}`,
         );
@@ -107,7 +111,7 @@ export function HomeView({
     );
 
     return { folders: folderMatches, songs: songMatches };
-  }, [folders, normalizedSearch, songs]);
+  }, [folders, normalizedSearch, songs, statusFilter]);
 
   const createFolderHere = async (name: string, parentId: FolderId) => {
     const createdId = await createFolder(uid, name, parentId);
@@ -283,7 +287,14 @@ export function HomeView({
         </div>
       </section>
 
-      {normalizedSearch ? (
+      <div className="status-filters no-print" role="group" aria-label="Filtrar cifras por status">
+        <button className="secondary-button" type="button" aria-pressed={statusFilter === "all"} onClick={() => setStatusFilter("all")}>Todas</button>
+        <button className="secondary-button" type="button" aria-pressed={statusFilter === "pending"} onClick={() => setStatusFilter("pending")}>Pendentes ({songs.filter((song) => song.status !== "ready").length})</button>
+        <button className="secondary-button" type="button" aria-pressed={statusFilter === "ready"} onClick={() => setStatusFilter("ready")}>Prontas ({songs.filter((song) => song.status === "ready").length})</button>
+        {statusFilter !== "all" ? <span className="subtle-text">Cifras de todas as pastas</span> : null}
+      </div>
+
+      {normalizedSearch || statusFilter !== "all" ? (
         <section className="search-results" aria-label="Resultados da pesquisa">
           <div className="section-heading">
             <h1>Resultados</h1>
@@ -302,15 +313,19 @@ export function HomeView({
               </button>
             ))}
             {searchResults.songs.map((song) => (
-              <button className="result-row" key={song.id} onClick={() => onOpenSong(song.id)} type="button">
+              <div className="song-result" key={song.id}>
+              <button className="result-row" onClick={() => onOpenSong(song.id)} type="button">
                 <Music2 aria-hidden="true" size={22} />
                 <span>
                   <strong>{song.title}</strong>
+                  <SongStatusBadge song={song} />
                   <small>
                     Cifra · {song.artist || "Sem cantor"} · {getFolderPathLabel(song.folderId, folders)}
                   </small>
                 </span>
               </button>
+              <SongStatusControl uid={uid} song={song} onToast={onToast} />
+              </div>
             ))}
             {searchResults.folders.length === 0 && searchResults.songs.length === 0 ? (
               <div className="empty-state">
@@ -398,7 +413,9 @@ export function HomeView({
                       <Music2 aria-hidden="true" size={34} />
                       <span>{song.title}</span>
                       <small>{song.artist || "Sem cantor"}</small>
+                      <SongStatusBadge song={song} />
                     </button>
+                    <SongStatusControl uid={uid} song={song} onToast={onToast} />
                     <div className="tile-actions">
                       <button
                         aria-label={`Editar cifra ${song.title}`}

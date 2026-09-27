@@ -67,6 +67,10 @@ Se este repositório for publicado como site de usuário ou organização (`seu-
 
 ## Funcionalidades
 
+- Status de revisão: marque qualquer cifra como **Pronta para tocar** ou **Pendente de revisão** na lista, na visualização ou no editor.
+- Cifras antigas sem status aparecem imediatamente como pendentes, sem precisar recriá-las. Novas cifras começam pendentes e podem ser salvas como prontas.
+- Os filtros **Prontas** e **Pendentes** buscam em todas as pastas e podem ser combinados com a pesquisa. O status fica salvo no Firebase e acompanha a conta entre dispositivos.
+
 - Login, criação de conta, recuperação de senha e logout.
 - Pastas e subpastas ilimitadas.
 - Criação, edição, movimentação e exclusão de pastas e cifras.

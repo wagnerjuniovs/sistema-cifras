@@ -4,7 +4,7 @@ import { ChordEditor, type ChordEditorHandle } from "./ChordEditor";
 import { FolderPicker } from "./FolderPicker";
 import { createFolder, createSong, updateSong } from "../services/firestore";
 import { firebaseErrorMessage } from "../lib/firebase";
-import type { FolderDoc, FolderId, SongDoc, SongInput, ToastKind } from "../types";
+import type { FolderDoc, FolderId, SongDoc, SongInput, SongStatus, ToastKind } from "../types";
 import { getFolderPathLabel } from "../utils/text";
 
 type SongEditorViewProps = {
@@ -37,6 +37,7 @@ function sameSongInput(a: SongInput, b: SongInput): boolean {
     a.title === b.title &&
     a.artist === b.artist &&
     a.content === b.content &&
+    a.status === b.status &&
     a.folderId === b.folderId
   );
 }
@@ -57,12 +58,14 @@ export function SongEditorView({
       props.mode === "edit"
         ? {
             title: props.song.title,
+            status: props.song.status ?? "pending",
             artist: props.song.artist,
             content: props.song.content,
             folderId: props.song.folderId,
           }
         : {
             title: "",
+            status: "pending",
             artist: "",
             content: "",
             folderId: props.initialFolderId,
@@ -73,6 +76,7 @@ export function SongEditorView({
   const initialRef = useRef(initialInput);
   const allowRouteLeaveRef = useRef(false);
   const [title, setTitle] = useState(initialInput.title);
+  const [status, setStatus] = useState<SongStatus>(initialInput.status ?? "pending");
   const [artist, setArtist] = useState(initialInput.artist);
   const [content, setContent] = useState(initialInput.content);
   const [folderId, setFolderId] = useState<FolderId>(initialInput.folderId);
@@ -83,17 +87,19 @@ export function SongEditorView({
   const currentInput = useMemo<SongInput>(
     () => ({
       title,
+      status,
       artist,
       content,
       folderId,
     }),
-    [artist, content, folderId, title],
+    [artist, content, folderId, title, status],
   );
   const dirty = !sameSongInput(currentInput, initialRef.current);
 
   useEffect(() => {
     initialRef.current = initialInput;
     setTitle(initialInput.title);
+    setStatus(initialInput.status ?? "pending");
     setArtist(initialInput.artist);
     setContent(initialInput.content);
     setFolderId(initialInput.folderId);
@@ -133,6 +139,7 @@ export function SongEditorView({
     try {
       const input: SongInput = {
         title: title.trim(),
+        status,
         artist: artist.trim(),
         content,
         folderId,
@@ -267,6 +274,13 @@ export function SongEditorView({
               type="text"
               value={artist}
             />
+          </label>
+          <label>
+            <span>Status da cifra</span>
+            <select value={status} onChange={(event) => setStatus(event.target.value as SongStatus)}>
+              <option value="pending">Pendente de revisão</option>
+              <option value="ready">Pronta para tocar</option>
+            </select>
           </label>
           <FolderPicker
             allowCreate

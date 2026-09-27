@@ -10,6 +10,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { AutoScrollControls } from "./AutoScrollControls";
+import { SongStatusBadge, SongStatusControl } from "./SongStatusControl";
 import { ChordText } from "./ChordText";
 import { FolderPicker } from "./FolderPicker";
 import { Modal } from "./Modal";
@@ -183,9 +184,11 @@ export function SongView({
           <div>
             <p className="eyebrow">{getFolderPathLabel(song.folderId, folders)}</p>
             <h1>{song.title}</h1>
+            <div className="no-print"><SongStatusBadge song={song} /></div>
             <p className="song-artist">{song.artist || "Sem cantor informado"}</p>
           </div>
           <div className="song-actions no-print">
+            <SongStatusControl uid={uid} song={song} onToast={onToast} />
             <button className="secondary-button" onClick={onEdit} type="button">
               <Edit3 aria-hidden="true" size={18} />
               Editar

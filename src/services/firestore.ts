@@ -13,7 +13,7 @@ import {
   type Unsubscribe,
 } from "firebase/firestore";
 import { db } from "../lib/firebase";
-import type { FolderDoc, FolderId, LibraryData, SongDoc, SongInput } from "../types";
+import type { FolderDoc, FolderId, LibraryData, SongDoc, SongInput, SongStatus } from "../types";
 import { getDescendantFolderIds, wouldCreateFolderCycle } from "../utils/text";
 
 function foldersRef(uid: string) {
@@ -50,6 +50,7 @@ function mapSong(snapshot: QueryDocumentSnapshot<DocumentData>): SongDoc {
   return {
     id: snapshot.id,
     title: String(data.title ?? ""),
+    status: data.status === "ready" ? "ready" : "pending",
     artist: String(data.artist ?? ""),
     content: String(data.content ?? ""),
     folderId: data.folderId ?? null,
@@ -175,6 +176,7 @@ export async function deleteFolderTree(
 export async function createSong(uid: string, input: SongInput): Promise<string> {
   const created = await addDoc(songsRef(uid), {
     title: input.title.trim(),
+    status: input.status ?? "pending",
     artist: input.artist.trim(),
     content: input.content,
     folderId: input.folderId,
@@ -187,6 +189,7 @@ export async function createSong(uid: string, input: SongInput): Promise<string>
 
 export function updateSong(uid: string, songId: string, input: SongInput): Promise<void> {
   return updateDoc(songRef(uid, songId), {
+    ...(input.status === undefined ? {} : { status: input.status }),
     title: input.title.trim(),
     artist: input.artist.trim(),
     content: input.content,
@@ -204,4 +207,8 @@ export function moveSong(uid: string, songId: string, folderId: FolderId): Promi
 
 export function deleteSong(uid: string, songId: string): Promise<void> {
   return deleteDoc(songRef(uid, songId));
+}
+
+export function setSongStatus(uid: string, songId: string, status: SongStatus): Promise<void> {
+  return updateDoc(songRef(uid, songId), { status, updatedAt: serverTimestamp() });
 }

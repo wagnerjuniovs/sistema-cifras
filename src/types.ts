@@ -1,6 +1,7 @@
 import type { Timestamp } from "firebase/firestore";
 
 export type FolderId = string | null;
+export type SongStatus = "pending" | "ready";
 
 export interface FolderDoc {
   id: string;
@@ -11,6 +12,7 @@ export interface FolderDoc {
 }
 
 export interface SongDoc {
+  status?: SongStatus;
   id: string;
   title: string;
   artist: string;
@@ -26,6 +28,7 @@ export interface LibraryData {
 }
 
 export interface SongInput {
+  status?: SongStatus;
   title: string;
   artist: string;
   content: string;

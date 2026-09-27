@@ -177,6 +177,22 @@ async function run() {
   });
   console.log("Cifra criada.");
 
+  console.log("Verificando status em cifra antiga, sem campo de status...");
+  for (const status of ["ready", "pending"]) {
+    await patchDocument(`users/${uid}/songs/${songId}`, { status: field(status) });
+    const saved = await firestoreRequest(`users/${uid}/songs/${songId}`);
+    if (saved.fields.status.stringValue !== status || !saved.fields.content.stringValue.includes("Intro:")) {
+      throw new Error("Status não persistiu ou conteúdo foi alterado.");
+    }
+  }
+  try {
+    await patchDocument(`users/${uid}/songs/${songId}`, { status: field("invalid") });
+    throw new Error("Status inválido foi aceito.");
+  } catch (error) {
+    if (!String(error).includes("PERMISSION_DENIED")) throw error;
+  }
+  console.log("Status pronta/pendente persistido; status inválido rejeitado.");
+
   console.log("Movendo cifra para a subpasta...");
   await patchDocument(`users/${uid}/songs/${songId}`, {
     folderId: field(subfolderId),
