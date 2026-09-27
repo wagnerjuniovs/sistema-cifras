@@ -30,18 +30,19 @@ export function AutoScrollControls({
     <div className={compact ? "autoscroll-controls compact" : "autoscroll-controls"}>
       <button
         aria-label={active ? "Pausar rolagem automática" : "Iniciar rolagem automática"}
+        title={active ? "Pausar rolagem automática" : "Iniciar rolagem automática"}
         className={active ? "primary-button icon-label" : "secondary-button icon-label"}
         onClick={() => onActiveChange(!active)}
         type="button"
       >
         {active ? <Pause aria-hidden="true" size={18} /> : <Play aria-hidden="true" size={18} />}
-        {active ? "Pausar" : "Iniciar"}
+        {compact ? null : active ? "Pausar" : "Iniciar"}
       </button>
-      <button aria-label="Diminuir velocidade" className="icon-button" onClick={decrease} type="button">
+      <button aria-label="Diminuir velocidade" title="Diminuir velocidade" className="icon-button" onClick={decrease} type="button">
         <Minus aria-hidden="true" size={18} />
       </button>
       <label className="speed-slider">
-        <span>Velocidade</span>
+        <span className={compact ? "sr-only" : undefined}>Velocidade</span>
         <input
           max={MAX_SPEED}
           min={MIN_SPEED}
@@ -51,7 +52,7 @@ export function AutoScrollControls({
           value={speed}
         />
       </label>
-      <button aria-label="Aumentar velocidade" className="icon-button" onClick={increase} type="button">
+      <button aria-label="Aumentar velocidade" title="Aumentar velocidade" className="icon-button" onClick={increase} type="button">
         <Plus aria-hidden="true" size={18} />
       </button>
       <span aria-live="polite" className="speed-readout">

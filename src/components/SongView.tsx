@@ -6,6 +6,7 @@ import {
   Maximize2,
   MoveRight,
   Music2,
+  MoreHorizontal,
   Printer,
   Trash2,
 } from "lucide-react";
@@ -59,6 +60,7 @@ export function SongView({
   const [autoScroll, setAutoScroll] = useState(false);
   const [speed, setSpeed] = useState(() => readSavedSpeed(song.id));
   const [presentationOpen, setPresentationOpen] = useState(false);
+  const [moreActionsOpen, setMoreActionsOpen] = useState(false);
   const breadcrumbs = getFolderPath(song.folderId, folders);
 
   useAutoScroll(null, autoScroll && !presentationOpen && !moveOpen && !deleteOpen, speed);
@@ -193,6 +195,16 @@ export function SongView({
               <Edit3 aria-hidden="true" size={18} />
               Editar
             </button>
+            <button className="secondary-button" onClick={() => setPresentationOpen(true)} type="button">
+              <Maximize2 aria-hidden="true" size={18} />
+              Tela cheia
+            </button>
+            <button className="icon-button song-more-toggle" type="button" aria-label="Mais opções da cifra"
+              aria-expanded={moreActionsOpen} aria-controls="song-secondary-actions"
+              onClick={() => setMoreActionsOpen((open) => !open)}>
+              <MoreHorizontal aria-hidden="true" size={20} />
+            </button>
+            <div id="song-secondary-actions" className={`song-secondary-actions${moreActionsOpen ? " expanded" : ""}`}>
             <button
               className="secondary-button"
               onClick={() => {
@@ -208,18 +220,15 @@ export function SongView({
               <Printer aria-hidden="true" size={18} />
               Imprimir / Salvar em PDF
             </button>
-            <button className="secondary-button" onClick={() => setPresentationOpen(true)} type="button">
-              <Maximize2 aria-hidden="true" size={18} />
-              Tela cheia
-            </button>
             <button className="danger-button" onClick={() => setDeleteOpen(true)} type="button">
               <Trash2 aria-hidden="true" size={18} />
               Excluir
             </button>
+            </div>
           </div>
         </header>
 
-        <dl className="song-meta no-print">
+        <dl className={`song-meta no-print${moreActionsOpen ? " expanded" : ""}`}>
           <div>
             <dt>Criada</dt>
             <dd>{formatDate(song.createdAt)}</dd>

@@ -76,6 +76,7 @@ for (const [width,height] of [[1366,768],[1920,1080],[2560,1440],[390,844],[844,
     await page.evaluate(value=>window.dispatchEvent(new CustomEvent('test-song',{detail:value})),song);
     await page.getByRole('button',{name:'Apresentar fixture'}).click();
     await expect(page.locator('.presentation-stage')).toBeVisible();
+    await page.getByRole('button',{name:'Ajustes da apresentação'}).click();
     await expect.poll(async()=> (await geometry(page)).violations).toEqual([]);
     const initial=await geometry(page);
     expect(initial.ids).toEqual([...initial.ids].sort((a,b)=>a-b));

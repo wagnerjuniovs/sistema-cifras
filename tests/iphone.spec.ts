@@ -1,7 +1,9 @@
 ﻿import { test, expect, type Page } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { readingChecks } from './reading-checks';
+import { mobileFooterChecks } from './footer-checks';
 readingChecks();
+mobileFooterChecks();
 test.setTimeout(60_000);
 const html = readFileSync('tests/fixtures/cifra-club.html', 'utf8');
 const longSong = Array.from({length:80},(_,i)=>`[Parte ${i+1}]\n     Am                  E/G#\nVerso ${i+1} de uma canção fictícia\n  Dm              G7\nOutra frase para cantar!\n`).join('\n');
@@ -81,6 +83,7 @@ test('apresentação: geometria, fonte, rolagem, rotação e saída',async({page
   await expect(page.locator('.cm-content')).toBeVisible();
   await page.evaluate(content=>window.dispatchEvent(new CustomEvent('test-song',{detail:content})),longSong);
   await page.getByRole('button',{name:'Apresentar fixture'}).tap();
+  await page.getByRole('button',{name:'Ajustes da apresentação'}).tap();
   await expect.poll(async()=> (await dimensions(page)).errors).toEqual([]);
   await expect.poll(async()=> (await dimensions(page)).scrolls).toBe(true);
   const initial=await dimensions(page);

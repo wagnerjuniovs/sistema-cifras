@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Minimize2, Minus, Plus } from "lucide-react";
+import { Minimize2, Minus, Plus, SlidersHorizontal } from "lucide-react";
 import { AutoScrollControls } from "./AutoScrollControls";
 import { ChordText } from "./ChordText";
 import { useAutoScroll } from "../hooks/useAutoScroll";
@@ -29,7 +29,7 @@ export function PresentationMode({
   const requestedFullscreenRef = useRef(false);
   const onExitRef = useRef(onExit);
   onExitRef.current = onExit;
-  const [controlsVisible, setControlsVisible] = useState(true);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [fontOffset, setFontOffset] = useState(0);
   const [allowColumns, setAllowColumns] = useState(true);
   const [layout, setLayout] = useState(() => calculatePresentationLayout(song.content, 800, 600));
@@ -87,7 +87,9 @@ export function PresentationMode({
   useEffect(() => {
     const node = shellRef.current;
     const previousFocus = document.activeElement as HTMLElement | null;
-    scrollRef.current?.focus();
+    const previousOverflow = document.documentElement.style.overflow;
+    document.documentElement.style.overflow = "hidden";
+    scrollRef.current?.focus({ preventScroll: true });
 
     if (node?.requestFullscreen) {
       node
@@ -109,37 +111,19 @@ export function PresentationMode({
     document.addEventListener("fullscreenchange", handleFullscreenChange);
     return () => {
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
-      previousFocus?.focus();
+      document.documentElement.style.overflow = previousOverflow;
+      previousFocus?.focus({ preventScroll: true });
     };
   }, []);
 
   useEffect(() => {
-    let timer = 0;
-
-    const reveal = (event?: Event) => {
-      if (event instanceof KeyboardEvent && event.key === "Escape") {
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
         onExitRef.current();
-        return;
       }
-
-      setControlsVisible(true);
-      window.clearTimeout(timer);
-      timer = window.setTimeout(() => { if (!shellRef.current?.contains(document.activeElement)) setControlsVisible(false); }, 3200);
     };
-
-    reveal();
-    window.addEventListener("mousemove", reveal);
-    window.addEventListener("mousedown", reveal);
-    window.addEventListener("touchstart", reveal, { passive: true });
-    window.addEventListener("keydown", reveal);
-
-    return () => {
-      window.clearTimeout(timer);
-      window.removeEventListener("mousemove", reveal);
-      window.removeEventListener("mousedown", reveal);
-      window.removeEventListener("touchstart", reveal);
-      window.removeEventListener("keydown", reveal);
-    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
   }, []);
 
   return (
@@ -157,15 +141,31 @@ export function PresentationMode({
         </div>
       </div>
 
-      <div
-        className={controlsVisible ? "presentation-controls visible no-print" : "presentation-controls no-print"}
-      >
+      <footer className="presentation-controls no-print" aria-label="Controles da apresentação">
+        <div className="presentation-bar">
         <div className="presentation-title">
-          <strong>{song.title}</strong>
+          <strong title={song.title}>{song.title}</strong>
           <span>{song.artist || "Sem cantor"}</span>
         </div>
         <div className="presentation-actions">
-          {(
+          <AutoScrollControls
+            active={activeScroll}
+            compact
+            onActiveChange={onActiveScrollChange}
+            onSpeedChange={onSpeedChange}
+            speed={speed}
+          />
+          <button aria-label="Ajustes da apresentação" title="Fonte e colunas" aria-expanded={settingsOpen}
+            aria-controls="presentation-settings" className="icon-button" type="button"
+            onClick={() => setSettingsOpen((open) => !open)}>
+            <SlidersHorizontal aria-hidden="true" size={18} />
+          </button>
+          <button aria-label="Sair da tela cheia" title="Sair da tela cheia" className="icon-button" onClick={onExit} type="button">
+            <Minimize2 aria-hidden="true" size={18} />
+          </button>
+        </div>
+        </div>
+        {settingsOpen ? <div className="presentation-settings" id="presentation-settings">
             <div className="font-controls" aria-label="Tamanho da fonte">
               <button
                 aria-label="Diminuir fonte"
@@ -175,7 +175,7 @@ export function PresentationMode({
               >
                 <Minus aria-hidden="true" size={18} />
               </button>
-              <span>Aa</span>
+              <span>Fonte</span>
               <button
                 aria-label="Aumentar fonte"
                 className="icon-button"
@@ -185,20 +185,9 @@ export function PresentationMode({
                 <Plus aria-hidden="true" size={18} />
               </button>
             </div>
-          )}
           <button type="button" className="secondary-button" aria-pressed={allowColumns} onClick={() => setAllowColumns((value) => !value)}>Colunas</button>
-          <AutoScrollControls
-            active={activeScroll}
-            compact
-            onActiveChange={onActiveScrollChange}
-            onSpeedChange={onSpeedChange}
-            speed={speed}
-          />
-          <button aria-label="Sair da tela cheia" className="icon-button" onClick={onExit} type="button">
-            <Minimize2 aria-hidden="true" size={20} />
-          </button>
-        </div>
-      </div>
+        </div> : null}
+      </footer>
     </div>
   );
 }
